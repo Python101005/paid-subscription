@@ -1,0 +1,68 @@
+# (main.py)
+import logging
+from aiogram import Bot, Dispatcher, executor, types
+from aiogram.types.message import ContentType
+import markups as nav
+
+TOKEN = "2138685259:AAGnTfkQUs8L9LCnKsxl-JbFQVihI2PSsfA"
+YOOTOKEN = "381764678:TEST:30765"
+
+
+logging.basicConfig(level=logging.INFO)
+
+# Initialize bot
+bot = Bot(token=TOKEN)
+dp = Dispatcher(bot)
+
+@dp.message_handler(commands=['start'])
+async def start(message: types.Message):
+    await bot.send_message(message.from_user.id, 'Добрый день', reply_markup = nav.mainMenu)
+
+
+@dp.message_handler()
+async def bot_message(message: types.Message):
+    if message.chat.type == 'private':
+        if message.text == '❤ ПОДПИСКА':
+            await bot.send_message(message.from_user.id, 'Описание возможностей подписки', reply_markup = nav.sub_inline_markup)
+
+
+@dp.callback_query_handler(text="submonth")
+async def submonth(call: types.CallbackQuery):
+    await bot.delete_message(call.from_user.id, call.message.message_id)
+    await bot.send_invoice(chat_id=call.from_user.id, title="Оформление подписки", description="Тестовое описание товара", payload="month_sub", provider_token=YOOTOKEN, currency="RUB", start_parameter="test_bot", prices=[{"label": "Руб", "amount": 15000}])
+
+@dp.pre_checkout_query_handler()
+async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
+    await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
+
+@dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT)
+async def process_pay(message: types.Message):
+    if message.successful_payment.invoice_payload == "month_sub":
+        # Подписываем пользователя
+        await bot.send_message(message.from_user.id, "Вам выдана подписка на месяц!")
+
+
+if __name__ == "__main__":
+    executor.start_polling(dp, skip_updates = True)
+    
+# (markups.py)
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+
+# --- Main menu ---
+btnSub = KeyboardButton('❤ ПОДПИСКА')
+btnSettings = KeyboardButton('🛠 НАСТРОЙКИ')
+mainMenu = ReplyKeyboardMarkup(resize_keyboard = True)
+mainMenu.add(btnSub)
+mainMenu.add(btnSettings)
+
+# --- Subscribe Inline Buttons ---
+sub_inline_markup = InlineKeyboardMarkup(row_width=1)
+
+btnSubMonth = InlineKeyboardButton(text="Месяц - 150 рублей", callback_data="submonth")
+
+sub_inline_markup.insert(btnSubMonth)
+
+
+
+    
+    
